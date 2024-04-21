@@ -1,0 +1,123 @@
+site_name: PyWaveFunction Documentation
+theme:
+  language: en
+
+  logo: images/logo_white.svg
+  favicon: images/logo_color.svg
+
+  name: material
+
+  palette:
+    - scheme: default
+      primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+
+    - scheme: slate
+      primary: light blue
+      accent: light blue
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+  features:
+    - content.action.edit
+    - navigation.instant
+    - navigation.tracking
+    - navigation.sections
+    - navigation.top
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+
+  icon:
+    repo: fontawesome/brands/github
+
+use_directory_urls: false
+repo_url: https://github.com/Argmaster/pywavefunction
+repo_name: Argmaster/pywavefunction
+edit_uri: edit/main/docs/
+
+# https://squidfunk.github.io/mkdocs-material/setup/extensions/python-markdown/
+markdown_extensions:
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - md_in_html
+  - toc:
+      permalink: true
+      permalink_title: Anchor link to this section for reference
+  # https://squidfunk.github.io/mkdocs-material/reference/code-blocks
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - admonition
+  - pymdownx.details
+
+plugins:
+  - search:
+      lang: en
+  # https://squidfunk.github.io/mkdocs-material/setup/building-for-offline-usage/
+  - offline
+  # https://mkdocs-macros-plugin.readthedocs.io/en/latest/
+  - macros:
+      include_dir: .
+      module_name: "./docs/macros/main"
+  # https://mkdocstrings.github.io/
+  - mkdocstrings:
+      handlers:
+        # https://mkdocstrings.github.io/python/
+        python:
+          # https://mkdocstrings.github.io/python/usage/configuration/docstrings/
+          options:
+            # https://mkdocstrings.github.io/python/usage/configuration/general/
+            docstring_style: numpy
+            show_bases: true
+            allow_inspection: true
+            heading_level: 2
+            show_root_heading: true
+            show_root_full_path: false
+            show_root_members_full_path: false
+            members_order: source
+            show_root_toc_entry: true
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            filters:
+              - "!^_"
+              - "^__"
+            show_signature: true
+            separate_signature: true
+            show_signature_annotations: true
+            group_by_category: true
+  # https://oprypin.github.io/mkdocs-gen-files/
+  - gen-files:
+      scripts:
+        - docs/generate_reference_pages.py
+  # https://pypi.org/project/mkdocs-literate-nav/
+  - literate-nav:
+      nav_file: SUMMARY.md
+
+extra_css:
+  - css/extra.css
+
+extra_javascript:
+  - js/extra.js
+
+extra:
+  version:
+    # https://squidfunk.github.io/mkdocs-material/setup/setting-up-versioning/
+    provider: mike
+
+hooks:
+  - docs/hooks.py
