@@ -91,26 +91,29 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.scripts]
 pywavefunction = "pywavefunction.__main__:main"
 
+[tool.poetry.extras]
+all = []
+
 [tool.poe.tasks]
 # -------------------------------------------------------------------------------------
 # git hooks
 install-hooks = [
-    { cmd = "poetry install --sync --with=docs --extras=language-server --extras=svg  --no-ansi" },
+    { cmd = "poetry install --sync --with=docs --extras=all  --no-ansi" },
     { cmd = "poetry run pre-commit install --install-hooks --overwrite" },
 ]
 # -------------
 # hook triggers
 run-code-quality-checks = [
-    { cmd = "poetry install --sync --with=docs --extras=language-server --extras=svg  --no-ansi" },
+    { cmd = "poetry install --sync --with=doc s--extras=all  --no-ansi" },
     { cmd = "poetry run pre-commit run --all-files -v" },
 ]
 # -------------------------------------------------------------------------------------
 run-unit-tests = [
-    { cmd = "poetry install --sync --with=docs --extras=language-server --extras=svg  --no-ansi" },
+    { cmd = "poetry install --sync --with=docs --extras=all --no-ansi" },
     { cmd = "poetry run pytest --log-level=DEBUG -s -n logical --cov=pywavefunction --cov-report=term-missing:skip-covered" },
 ]
 run-type-checks = [
-    { cmd = "poetry install --sync --with=docs --extras=language-server --extras=svg --no-ansi" },
+    { cmd = "poetry install --sync --with=docs --extras=all --no-ansi" },
     { cmd = "poetry run mypy --config-file=pyproject.toml src/pywavefunction/ test/" },
 ]
 
@@ -131,6 +134,7 @@ lint.ignore = [
     "D107",   # Adding docstring to __init__ doesn't make sense when class already has its docstring.
     "ISC001", # Checks for the absence of trailing commas. Conflicts with ruff format.
     "COM812", # Checks for implicitly concatenated strings on a single line. Conflicts with ruff format.
+    "EXE002",
 ]
 show-fixes = true
 target-version = "py38"
