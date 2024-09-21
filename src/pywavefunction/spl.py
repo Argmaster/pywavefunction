@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import io
-from typing import TYPE_CHECKING
 
 import numpy as np
 
-if TYPE_CHECKING:
-    import numpy.typing as npt
+from pywavefunction.typing import XY_Array
 
 
-def load(fp: io.TextIOBase) -> npt.NDArray[np.float64]:
+def load(fp: io.TextIOBase) -> XY_Array:
     """Load the SPL data from file."""
     return loads(fp.read())
 
 
-def loads(s: str) -> npt.NDArray[np.float64]:
+def loads(s: str) -> XY_Array:
     """Load the SPL data from string."""
     x_vector: list[float] = []
     y_vector: list[float] = []
@@ -29,16 +27,16 @@ def loads(s: str) -> npt.NDArray[np.float64]:
             x_vector.append(float(x))
             y_vector.append(float(y))
 
-    return np.array([x_vector, y_vector])
+    return np.array(x_vector, dtype=np.float64), np.array(y_vector, dtype=np.float64)
 
 
-def dump(fp: io.TextIOBase, data: npt.NDArray[np.float64]) -> None:
+def dump(fp: io.TextIOBase, data: XY_Array) -> None:
     """Dump the SPL data to file."""
-    for x, y in data.T:
+    for x, y in zip(*data):
         fp.write(f"   {x:21.16f}     {y:21.12f}     \n")
 
 
-def dumps(data: npt.NDArray[np.float64]) -> str:
+def dumps(data: XY_Array) -> str:
     """Dump the SPL data to string."""
     fp = io.StringIO()
     dump(fp, data)

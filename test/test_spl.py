@@ -34,6 +34,6 @@ def test_dumps_sr9_spl(tmp_path: Path) -> None:
     with tmp_path.open() as fp:
         output_data = pywavefunction.spl.load(fp)
 
-    for (x0, y0), (x1, y1) in zip(data.T, output_data.T):
+    for (x0, y0), (x1, y1) in zip(zip(*data), zip(*output_data)):
         assert math.isclose(x0, x1, rel_tol=1e-9)
         assert math.isclose(y0, y1, rel_tol=1e-9)
