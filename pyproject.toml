@@ -41,15 +41,9 @@ classifiers = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.8,<3.13"
-numpy = [
-    { version = "^1.24", python = "<3.9" },
-    { version = "^1.26", python = ">=3.9" },
-]
-numba = [
-    { version = "^0.58", python = "<3.9" },
-    { version = "^0.59", python = ">=3.9" },
-]
+python = "^3.9,<3.13"
+numpy = "^1.26"
+numba = "^0.59"
 click = "^8.1.7"
 
 [tool.poetry.group.dev.dependencies]
@@ -68,6 +62,7 @@ ipykernel = "^6.25.0"
 twine = "^4.0.2"
 docutils = "0.20.1"
 typing-extensions = "^4.11.0"
+matplotlib = "^3.9.2"
 
 [tool.poetry.group.docs]
 optional = true
