@@ -3,12 +3,12 @@ from __future__ import annotations
 import math
 from typing import Callable, Optional, TypedDict, TypeVar
 
-import numba
 import numpy as np
 import numpy.typing as npt
+from numba import cuda
 
-import pywavefunction._cpu.params as params_array
-import pywavefunction._cpu.status as status_array
+import pywavefunction._gpu.params as params_array
+import pywavefunction._gpu.status as status_array
 from pywavefunction.typing import XY_Array
 
 ToCm = 2.194746e5
@@ -28,7 +28,7 @@ MAX_REVERSE_ITERATIONS = 16384
 BOUNDARY_CONDITION_SMALL_FLOAT = 1e-25
 
 
-jit = numba.jit(nopython=True, cache=True, nogil=True)
+jit = cuda.jit(device=True, inline=True, cache=True, opt=True)
 
 
 ERROR_CODE_MAPPING = {
@@ -67,6 +67,7 @@ def vibwa(
     integration_step: float = 0.001,
 ) -> Optional[tuple[list[float], npt.NDArray[np.float64]]]:
     in_last_level_index = last_level_index
+    stream = cuda.stream()
 
     # Transfer
     in_reduced_mass = (
@@ -76,9 +77,16 @@ def vibwa(
     )
 
     out_energy_buffer = np.zeros(in_last_level_index + 1, dtype=np.float64)  # type: ignore[pylance]
+    out_energy_buffer = cuda.to_device(out_energy_buffer, stream=stream)
+
     in_fxg: npt.NDArray[np.float64] = np.zeros(sample_count, dtype=np.float64)  # type: ignore[pylance]
+    in_fxg = cuda.to_device(in_fxg, stream=stream)
+
     in_out_wave_function_y_vector: npt.NDArray[np.float64] = np.zeros(
         (sample_count,), dtype=np.float64
+    )
+    in_out_wave_function_y_vector = cuda.to_device(
+        in_out_wave_function_y_vector, stream=stream
     )
 
     in_x_vector, in_potential_well_y = x_y
@@ -90,6 +98,9 @@ def vibwa(
         msg = "X and Y of potential must have the same length"
         raise ValueError(msg)
 
+    in_x_vector = cuda.to_device(in_x_vector, stream=stream)
+    in_potential_well_y = cuda.to_device(in_potential_well_y, stream=stream)
+
     wave_functions = np.zeros((in_last_level_index + 1, sample_count), dtype=np.float64)  # type: ignore[pylance]
 
     potential_well_min_y = min(in_potential_well_y)
@@ -99,7 +110,8 @@ def vibwa(
         if in_potential_well_y[i + 1] > in_potential_well_y[i]:
             potential_well_max_y = in_potential_well_y[i + 1]
 
-    params = params_array.create()
+    host_params = params_array.create()
+    params = cuda.to_device(host_params, stream=stream)
 
     params_array.set_min_distance_to_asymptote(params, min_distance_to_asymptote)
     params_array.set_integration_step(params, integration_step)
@@ -109,15 +121,22 @@ def vibwa(
     params_array.set_potential_well_max_y(params, potential_well_max_y)
     params_array.set_energy_value_to_check(params, potential_well_min_y)
 
-    status = status_array.create()
+    host_status = status_array.create()
+    status = cuda.to_device(host_status, stream=stream)
 
     in_out_wave_function_y_right_tail: npt.NDArray[np.float64] = np.zeros(
         2, dtype=np.float64
     )  # type: ignore[pylance]
+    in_out_wave_function_y_right_tail = cuda.to_device(
+        in_out_wave_function_y_right_tail, stream=stream
+    )
 
     in_out_wave_function_y_left_tail: npt.NDArray[np.float64] = np.zeros(
         2, dtype=np.float64
     )  # type: ignore[pylance]
+    in_out_wave_function_y_left_tail = cuda.to_device(
+        in_out_wave_function_y_left_tail, stream=stream
+    )
 
     for level_index in range(last_level_index + 1):
         params_array.set_lower_energy_search_limit(
@@ -128,7 +147,7 @@ def vibwa(
         )
         params_array.set_distance_to_asymptote(params, MAX_FLOAT_64)
 
-        bisection_jit(
+        bisection_jit[1, 1, stream](
             params,
             status,
             in_x_vector,
@@ -142,15 +161,26 @@ def vibwa(
             0,
             0,
         )
-        if status_array.get_error_code(status) != 0:
-            raise RuntimeError(ERROR_CODE_MAPPING[status_array.get_error_code(status)])
+        host_status = status.copy_to_host()
+        if status_array.get_error_code(host_status) != 0:
+            raise RuntimeError(
+                ERROR_CODE_MAPPING[status_array.get_error_code(host_status)]
+            )
 
-        for i in range(sample_count):
-            wave_functions[level_index][i] = in_out_wave_function_y_vector[i]
-
-        out_energy_buffer[level_index] = params_array.get_energy_value_to_check(
-            params  # type: ignore[pylance]
+        host_in_out_wave_function_y_vector = (
+            in_out_wave_function_y_vector.copy_to_host()
         )
+        for i in range(sample_count):
+            wave_functions[level_index][i] = host_in_out_wave_function_y_vector[i]
+
+        host_params = params.copy_to_host()
+        out_energy_buffer[level_index] = params_array.get_energy_value_to_check(
+            host_params  # type: ignore[pylance]
+        )
+
+    out_energy_buffer = out_energy_buffer.copy_to_host()
+    in_x_vector = in_x_vector.copy_to_host()
+    in_potential_well_y = in_potential_well_y.copy_to_host()
 
     return [e * ToCm for e in out_energy_buffer], wave_functions
 
@@ -397,7 +427,9 @@ def bisection(
         return
 
 
-bisection_jit: Callable = jit(bisection)
+bisection_jit: cuda.FakeCUDAKernel = cuda.jit(  # type: ignore[pylance]
+    device=False, cache=True, opt=True
+)(bisection)
 
 
 @jit
